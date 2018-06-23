@@ -113,14 +113,7 @@ function sendNextCard (cards, set, i, callback) {
     });
 }
 
-function sendNextSet (sets, i, callback) {
-    const keys = Object.keys(sets);
-    if (i >= keys.length) {
-        console.log('All set data uploaded to database');
-        callback();
-        return;
-    }
-    const set = sets[keys[i]];
+function sendNextSet (set, callback) {
     const cards = set.cards;
     console.log(`Processing set '${set.name}' with ${cards.length} cards...`);
     set.cards = [];
@@ -150,7 +143,9 @@ function sendNextSet (sets, i, callback) {
                         console.error(e);
                         return;
                     }
-                    sendNextSet(sets, i + 1, callback);
+                    if (callback) {
+                        callback();
+                    }
                 });
             } else {
                 console.log('Creating set');
@@ -160,7 +155,9 @@ function sendNextSet (sets, i, callback) {
                         console.error(e);
                         return;
                     }
-                    sendNextSet(sets, i + 1, callback);
+                    if (callback) {
+                        callback();
+                    }
                 });
             }
         });
@@ -169,10 +166,17 @@ function sendNextSet (sets, i, callback) {
 
 function processData (jsonString) {
     const jsonData = JSON.parse(jsonString);
-    sendNextSet(jsonData, 0, () => {
-        console.log('Ingest completed');
-        mongoose.disconnect();
-    });
+    const sets = Object.keys(jsonData);
+    for (let i = sets.length; i--;) {
+        if (i === 0) {
+            sendNextSet(jsonData[sets[i]], () => {
+                console.log('Ingest completed');
+                mongoose.disconnect();
+            });
+        } else {
+            sendNextSet(jsonData[sets[i]]);
+        }
+    }
 }
 
 let db = 'mongodb://localhost/deckitron';
